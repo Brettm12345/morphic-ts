@@ -11,16 +11,6 @@ interface Folder<A> {
   <R>(f: (a: A) => R): (a: A) => R
 }
 
-/**
- * Dispatch calls for each tag value, ensuring a common result type `R`
- */
-interface Matcher<A, Tag extends keyof A> extends MatcherInter<A, ValueByKeyByTag<A>[Tag]> {}
-interface MatcherInter<A, Record> {
-  <R>(match: Cases<Record, R>): (a: A) => R
-  // tslint:disable-next-line: unified-signatures
-  <R>(match: Partial<Cases<Record, R>>, def: (_: { [k in keyof Record]: Record[k] }[keyof Record]) => R): (a: A) => R
-}
-
 interface Transform<A, Tag extends keyof A> extends TransformInter<A, ValueByKeyByTag<A>[Tag]> {}
 interface TransformInter<A, Record> {
   (match: Partial<Cases<Record, A>>): (a: A) => A
@@ -75,10 +65,10 @@ export interface Reducer<S, A> {
  */
 export interface Matchers<A, Tag extends keyof A> {
   fold: Folder<A>
-  match: Matcher<A, Tag>
   transform: Transform<A, Tag>
-  matchWiden: MatcherWiden<A, Tag>
+  match: MatcherWiden<A, Tag>
   createReducer: <S>(initialState: S) => ReducerBuilder<S, A, Tag>
+  strict: <R>(f: (_: A) => R) => (_: A) => R
 }
 
 /**
@@ -91,7 +81,6 @@ export const Matchers = <A, Tag extends keyof A>(tag: Tag) => (keys: KeysDefinit
     const c = match[a[tag]]
     return c ? c(a) : a
   }
-  const matchWiden = match
   const fold = identity
   const createReducer = <S>(initialState: S): ReducerBuilder<S, A, Tag> => (m: any, def?: any) => {
     const matcher = match(m, def)
@@ -102,9 +91,9 @@ export const Matchers = <A, Tag extends keyof A>(tag: Tag) => (keys: KeysDefinit
   }
   return {
     match,
-    matchWiden,
     transform,
     fold,
-    createReducer
+    createReducer,
+    strict: identity
   }
 }
